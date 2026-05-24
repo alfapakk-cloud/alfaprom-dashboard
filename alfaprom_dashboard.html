@@ -1,0 +1,392 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>АЛЬФАПРОМ — Рейтинг менеджеров</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<style>
+  :root {
+    --orange: #FF6B00;
+    --orange-light: #FF9A00;
+    --orange-pale: #FFF3E8;
+    --orange-border: #FFD4B0;
+    --white: #ffffff;
+    --bg: #F7F4F0;
+    --text: #1A1A1A;
+    --text-muted: #888;
+    --green: #2E7D32;
+    --red: #C62828;
+    --radius: 12px;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
+
+  header {
+    background: var(--orange);
+    padding: 0 32px;
+    display: flex; align-items: center; justify-content: space-between;
+    height: 72px;
+    position: sticky; top: 0; z-index: 100;
+    box-shadow: 0 2px 12px rgba(255,107,0,0.3);
+  }
+  .logo { display: flex; align-items: center; gap: 16px; }
+  .logo-mark {
+    width: 40px; height: 40px; background: rgba(255,255,255,0.2);
+    border-radius: 8px; display: flex; align-items: center; justify-content: center;
+    font-family: 'Bebas Neue', sans-serif; font-size: 22px; color: #fff; letter-spacing: 1px;
+  }
+  .logo-text { color: #fff; }
+  .logo-text h1 { font-family: 'Bebas Neue', sans-serif; font-size: 24px; letter-spacing: 3px; line-height: 1; }
+  .logo-text p { font-size: 11px; opacity: 0.8; letter-spacing: 1px; text-transform: uppercase; }
+  .header-right { display: flex; align-items: center; gap: 16px; }
+  .update-info { text-align: right; color: rgba(255,255,255,0.85); }
+  .update-info .time { font-size: 18px; font-weight: 600; color: #fff; }
+  .update-info .label { font-size: 10px; text-transform: uppercase; letter-spacing: 1px; opacity: 0.7; }
+  .refresh-btn {
+    background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.4);
+    color: #fff; padding: 8px 18px; border-radius: 8px; cursor: pointer;
+    font-size: 13px; font-family: 'Inter', sans-serif; transition: background 0.2s;
+    display: flex; align-items: center; gap: 6px;
+  }
+  .refresh-btn:hover { background: rgba(255,255,255,0.25); }
+  .refresh-btn svg { width: 14px; height: 14px; }
+  .refresh-btn.loading svg { animation: spin 1s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  main { padding: 24px 32px; max-width: 1400px; margin: 0 auto; }
+
+  .month-badge {
+    display: inline-flex; align-items: center; gap: 8px;
+    background: var(--white); border: 1px solid var(--orange-border);
+    border-radius: 20px; padding: 6px 16px; font-size: 13px; color: var(--orange);
+    font-weight: 500; margin-bottom: 20px;
+  }
+  .month-dot { width: 8px; height: 8px; background: var(--orange); border-radius: 50%; }
+
+  .kpi-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 24px; }
+  .kpi-card {
+    background: var(--white); border-radius: var(--radius);
+    border: 1px solid var(--orange-border); padding: 16px 20px;
+    position: relative; overflow: hidden;
+  }
+  .kpi-card::before {
+    content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px;
+    background: var(--orange);
+  }
+  .kpi-label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.8px; color: var(--text-muted); margin-bottom: 8px; }
+  .kpi-value { font-family: 'Bebas Neue', sans-serif; font-size: 36px; letter-spacing: 1px; line-height: 1; }
+  .kpi-value.orange { color: var(--orange); }
+  .kpi-value.green { color: var(--green); }
+  .kpi-value.red { color: var(--red); }
+  .kpi-sub { font-size: 11px; color: var(--text-muted); margin-top: 4px; }
+
+  .section-label {
+    font-size: 11px; text-transform: uppercase; letter-spacing: 1.5px;
+    color: var(--orange); font-weight: 600; margin-bottom: 14px;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .section-label::after { content: ''; flex: 1; height: 1px; background: var(--orange-border); }
+
+  .managers-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin-bottom: 24px; }
+  
+  .mgr-card {
+    background: var(--white); border-radius: var(--radius);
+    border: 1px solid var(--orange-border); padding: 16px;
+    transition: box-shadow 0.2s; position: relative;
+  }
+  .mgr-card:hover { box-shadow: 0 4px 20px rgba(255,107,0,0.12); }
+  .mgr-card.leader { border-color: var(--orange); border-width: 2px; }
+  .leader-crown {
+    position: absolute; top: -1px; right: 14px;
+    background: var(--orange); color: #fff;
+    font-size: 10px; font-weight: 600; padding: 3px 10px;
+    border-radius: 0 0 8px 8px; text-transform: uppercase; letter-spacing: 0.5px;
+  }
+
+  .mgr-header { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
+  .mgr-avatar {
+    width: 38px; height: 38px; border-radius: 50%;
+    background: var(--orange-pale); border: 2px solid var(--orange-border);
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 600; font-size: 13px; color: var(--orange); flex-shrink: 0;
+  }
+  .mgr-avatar.leader-av { background: var(--orange); color: #fff; border-color: var(--orange); }
+  .mgr-name { font-weight: 600; font-size: 14px; }
+  .mgr-rank { font-size: 11px; color: var(--text-muted); }
+
+  .speedometers { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 10px; }
+  .spd-wrap { text-align: center; }
+  .spd-lbl { font-size: 9px; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-muted); margin-bottom: 2px; }
+  canvas.spd { display: block; margin: 0 auto; }
+
+  .mgr-stats { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+  .stat-box { background: var(--orange-pale); border-radius: 7px; padding: 6px 8px; }
+  .stat-lbl { font-size: 9px; text-transform: uppercase; letter-spacing: 0.4px; color: #CC5500; }
+  .stat-val { font-size: 13px; font-weight: 600; color: var(--text); margin-top: 1px; }
+
+  .bottom-row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  .chart-card { background: var(--white); border-radius: var(--radius); border: 1px solid var(--orange-border); padding: 20px; }
+
+  .progress-item { margin-bottom: 10px; }
+  .progress-header { display: flex; justify-content: space-between; font-size: 12px; margin-bottom: 4px; }
+  .progress-header .name { font-weight: 500; }
+  .progress-header .val { color: var(--orange); font-weight: 600; }
+  .track { background: #FFE8D6; border-radius: 20px; height: 8px; overflow: hidden; }
+  .fill { height: 100%; border-radius: 20px; transition: width 0.8s ease; }
+  .fill.high { background: linear-gradient(90deg, #FF6B00, #FFB300); }
+  .fill.mid { background: linear-gradient(90deg, #FF8C00, #FF6B00); }
+  .fill.low { background: linear-gradient(90deg, #C62828, #E53935); }
+
+  .legend { display: flex; gap: 16px; margin-bottom: 12px; font-size: 12px; color: var(--text-muted); }
+  .legend span { display: flex; align-items: center; gap: 5px; }
+  .legend i { width: 10px; height: 10px; border-radius: 2px; }
+
+  .error-msg {
+    background: #fff3f3; border: 1px solid #ffcdd2; border-radius: 8px;
+    padding: 12px 16px; color: #c62828; font-size: 13px; margin-bottom: 16px; display: none;
+  }
+
+  footer {
+    text-align: center; padding: 20px; font-size: 11px; color: var(--text-muted);
+    border-top: 1px solid var(--orange-border); margin-top: 24px;
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">
+    <div class="logo-mark">АП</div>
+    <div class="logo-text">
+      <h1>АЛЬФАПРОМ</h1>
+      <p>Рейтинг менеджеров</p>
+    </div>
+  </div>
+  <div class="header-right">
+    <div class="update-info">
+      <div class="time" id="update-time">—:—</div>
+      <div class="label">Последнее обновление</div>
+    </div>
+    <button class="refresh-btn" id="refreshBtn" onclick="loadData()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+        <polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/>
+      </svg>
+      Обновить
+    </button>
+  </div>
+</header>
+
+<main>
+  <div class="month-badge"><div class="month-dot"></div><span id="month-label">Май 2026</span></div>
+  <div class="error-msg" id="error-msg">Не удалось загрузить данные. Проверьте доступ к Google Таблице.</div>
+
+  <div class="kpi-grid">
+    <div class="kpi-card"><div class="kpi-label">План отдела</div><div class="kpi-value orange" id="k-plan">—</div><div class="kpi-sub">рублей</div></div>
+    <div class="kpi-card"><div class="kpi-label">Факт отдела</div><div class="kpi-value" id="k-fact">—</div><div class="kpi-sub">рублей</div></div>
+    <div class="kpi-card"><div class="kpi-label">% выполнения</div><div class="kpi-value" id="k-pct">—</div><div class="kpi-sub">от плана на сегодня</div></div>
+    <div class="kpi-card"><div class="kpi-label">Конверсия в оплату</div><div class="kpi-value orange" id="k-conv">—</div><div class="kpi-sub">средняя по отделу</div></div>
+  </div>
+
+  <div class="section-label">Менеджеры — выполнение и скорость движения к плану</div>
+  <div class="managers-grid" id="managers-grid"></div>
+
+  <div class="bottom-row">
+    <div class="chart-card">
+      <div class="section-label">Прогресс к плану</div>
+      <div id="progress-bars"></div>
+    </div>
+    <div class="chart-card">
+      <div class="section-label">Факт vs план (руб.)</div>
+      <div class="legend">
+        <span><i style="background:#FFD4B0"></i>План</span>
+        <span><i style="background:#FF6B00"></i>Факт</span>
+      </div>
+      <div style="position:relative;height:260px">
+        <canvas id="barChart" role="img" aria-label="Гистограмма план и факт по менеджерам">Данные загружаются...</canvas>
+      </div>
+    </div>
+  </div>
+</main>
+
+<footer>АЛЬФАПРОМ &nbsp;·&nbsp; Данные обновляются в реальном времени из Google Таблицы</footer>
+
+<script>
+const API_URL = "https://script.google.com/macros/s/AKfycbzX9C2es_idabnaMUrMj7yvLIkdNlwa-H63TuC0FOEPoKSDKvwa9LBaDCYxMdNUq7Tb1Q/exec";
+let chartInstance = null;
+
+function parseNum(v) {
+  if (v === null || v === undefined || v === '') return 0;
+  const n = parseFloat(String(v).replace(/\s/g,'').replace(',','.'));
+  return isNaN(n) ? 0 : n;
+}
+function fmtMoney(n) { return Math.round(parseNum(n)).toLocaleString('ru-RU'); }
+function initials(name) {
+  const parts = name.trim().split(/\s+/);
+  return parts.length > 1 ? (parts[0][0]+parts[1][0]).toUpperCase() : name.slice(0,2).toUpperCase();
+}
+
+function drawSpeedometer(canvas, value) {
+  const ctx = canvas.getContext('2d');
+  const W = canvas.width, H = canvas.height;
+  ctx.clearRect(0, 0, W, H);
+  const cx = W/2, cy = H * 0.78, r = Math.min(W,H) * 0.42;
+  const val = Math.min(parseNum(value), 150);
+  const startA = Math.PI, endA = 2 * Math.PI;
+  const fillA = startA + (val / 100) * Math.PI;
+
+  ctx.beginPath(); ctx.arc(cx, cy, r, startA, endA);
+  ctx.lineWidth = 12; ctx.strokeStyle = '#FFE0C2'; ctx.lineCap = 'round'; ctx.stroke();
+
+  const color = val >= 100 ? '#2E7D32' : val >= 60 ? '#FF6B00' : '#C62828';
+  ctx.beginPath(); ctx.arc(cx, cy, r, startA, Math.min(fillA, endA));
+  ctx.lineWidth = 12; ctx.strokeStyle = color; ctx.lineCap = 'round'; ctx.stroke();
+
+  const ticks = [0, 25, 50, 75, 100];
+  ticks.forEach(t => {
+    const a = Math.PI + (t/100)*Math.PI;
+    const x1 = cx + (r-8)*Math.cos(a), y1 = cy + (r-8)*Math.sin(a);
+    const x2 = cx + (r-14)*Math.cos(a), y2 = cy + (r-14)*Math.sin(a);
+    ctx.beginPath(); ctx.moveTo(x1,y1); ctx.lineTo(x2,y2);
+    ctx.lineWidth = 1.5; ctx.strokeStyle = '#ccc'; ctx.stroke();
+  });
+
+  const na = Math.PI + (val/100)*Math.PI;
+  ctx.beginPath(); ctx.moveTo(cx, cy);
+  ctx.lineTo(cx + (r*0.68)*Math.cos(na), cy + (r*0.68)*Math.sin(na));
+  ctx.lineWidth = 2; ctx.strokeStyle = '#333'; ctx.lineCap = 'round'; ctx.stroke();
+  ctx.beginPath(); ctx.arc(cx, cy, 4, 0, 2*Math.PI); ctx.fillStyle = '#333'; ctx.fill();
+
+  ctx.font = 'bold 11px Inter, sans-serif'; ctx.textAlign = 'center';
+  ctx.fillStyle = color;
+  ctx.fillText(Math.round(val) + '%', cx, cy - r*0.22);
+}
+
+function buildManagers(rows) {
+  const managers = [];
+  for (let i = 2; i < rows.length; i++) {
+    const r = rows[i];
+    const name = String(r[0]||'').replace(/[⭐!✨☆★]/g,'').trim();
+    if (!name || name === 'План') continue;
+    const plan = parseNum(r[1]), fact = parseNum(r[2]);
+    const pctExec = parseNum(r[3]) * 100;
+    const runRate = parseNum(r[4]) * 100;
+    const zayvok = parseNum(r[5]);
+    const conv = r[10] ? String(r[10]).replace('%','').trim() : '0';
+    managers.push({name, plan, fact, pctExec, runRate, zayvok, conv});
+  }
+  managers.sort((a,b) => b.pctExec - a.pctExec);
+  return managers;
+}
+
+function renderManagers(managers) {
+  const grid = document.getElementById('managers-grid');
+  grid.innerHTML = '';
+  managers.forEach((m, idx) => {
+    const isLeader = idx === 0;
+    const card = document.createElement('div');
+    card.className = 'mgr-card' + (isLeader ? ' leader' : '');
+    card.innerHTML = `
+      ${isLeader ? '<div class="leader-crown">🏆 Лидер</div>' : ''}
+      <div class="mgr-header">
+        <div class="mgr-avatar${isLeader?' leader-av':''}">${initials(m.name)}</div>
+        <div><div class="mgr-name">${m.name}</div><div class="mgr-rank">#${idx+1} в рейтинге</div></div>
+      </div>
+      <div class="speedometers">
+        <div class="spd-wrap"><div class="spd-lbl">% выполнения</div><canvas class="spd" id="spd-e-${idx}" width="100" height="60"></canvas></div>
+        <div class="spd-wrap"><div class="spd-lbl">RunRate</div><canvas class="spd" id="spd-r-${idx}" width="100" height="60"></canvas></div>
+      </div>
+      <div class="mgr-stats">
+        <div class="stat-box"><div class="stat-lbl">Факт</div><div class="stat-val">${fmtMoney(m.fact)}</div></div>
+        <div class="stat-box"><div class="stat-lbl">Заявок</div><div class="stat-val">${Math.round(m.zayvok)}</div></div>
+        <div class="stat-box"><div class="stat-lbl">План</div><div class="stat-val">${fmtMoney(m.plan)}</div></div>
+        <div class="stat-box"><div class="stat-lbl">Конверсия</div><div class="stat-val">${m.conv}%</div></div>
+      </div>`;
+    grid.appendChild(card);
+    setTimeout(() => {
+      const c1 = document.getElementById('spd-e-'+idx);
+      const c2 = document.getElementById('spd-r-'+idx);
+      if (c1) drawSpeedometer(c1, m.pctExec);
+      if (c2) drawSpeedometer(c2, m.runRate);
+    }, 50);
+  });
+}
+
+function renderProgress(managers) {
+  const wrap = document.getElementById('progress-bars');
+  wrap.innerHTML = '';
+  managers.forEach(m => {
+    const p = Math.min(Math.round(m.pctExec), 100);
+    const cls = p >= 80 ? 'high' : p >= 50 ? 'mid' : 'low';
+    wrap.innerHTML += `
+      <div class="progress-item">
+        <div class="progress-header"><span class="name">${m.name}</span><span class="val">${p}%</span></div>
+        <div class="track"><div class="fill ${cls}" style="width:${p}%"></div></div>
+      </div>`;
+  });
+}
+
+function renderChart(managers) {
+  if (chartInstance) chartInstance.destroy();
+  chartInstance = new Chart(document.getElementById('barChart'), {
+    type: 'bar',
+    data: {
+      labels: managers.map(m => m.name),
+      datasets: [
+        { label: 'План', data: managers.map(m => Math.round(m.plan)), backgroundColor: '#FFD4B0', borderRadius: 5, borderSkipped: false },
+        { label: 'Факт', data: managers.map(m => Math.round(m.fact)), backgroundColor: '#FF6B00', borderRadius: 5, borderSkipped: false }
+      ]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: {
+        x: { ticks: { font: { size: 11, family: 'Inter' }, autoSkip: false, maxRotation: 30 }, grid: { display: false } },
+        y: { ticks: { callback: v => (v/1000)+'k', font: { size: 10 } }, grid: { color: 'rgba(0,0,0,0.05)' } }
+      }
+    }
+  });
+}
+
+async function loadData() {
+  const btn = document.getElementById('refreshBtn');
+  const err = document.getElementById('error-msg');
+  btn.classList.add('loading');
+  err.style.display = 'none';
+  try {
+    const resp = await fetch(API_URL);
+    if (!resp.ok) throw new Error('HTTP ' + resp.status);
+    const rows = await resp.json();
+
+    const totalRow = rows.find((r,i) => i > 2 && String(r[0]).includes('000 000') || (parseNum(r[0]) === 0 && parseNum(r[1]) > 500000));
+    const lastDataRow = rows[rows.length - 2] || rows[rows.length - 1];
+
+    document.getElementById('k-plan').textContent = fmtMoney(lastDataRow[0]);
+    document.getElementById('k-fact').textContent = fmtMoney(lastDataRow[1]);
+    const pctVal = parseNum(lastDataRow[2]) * 100;
+    const pctEl = document.getElementById('k-pct');
+    pctEl.textContent = Math.round(pctVal) + '%';
+    pctEl.className = 'kpi-value ' + (pctVal >= 100 ? 'green' : pctVal >= 60 ? 'orange' : 'red');
+    document.getElementById('k-conv').textContent = lastDataRow[8] ? String(lastDataRow[8]).replace('%','').trim()+'%' : '—';
+
+    const managers = buildManagers(rows);
+    renderManagers(managers);
+    renderProgress(managers);
+    renderChart(managers);
+
+    const now = new Date();
+    document.getElementById('update-time').textContent = now.toLocaleTimeString('ru-RU', {hour:'2-digit',minute:'2-digit'});
+    document.getElementById('month-label').textContent = now.toLocaleDateString('ru-RU', {month:'long', year:'numeric'});
+  } catch(e) {
+    err.style.display = 'block';
+    console.error(e);
+  }
+  btn.classList.remove('loading');
+}
+
+loadData();
+setInterval(loadData, 5 * 60 * 1000);
+</script>
+</body>
+</html>
