@@ -483,8 +483,10 @@ async function loadData() {
   btn.classList.remove('loading');
 }
 
-loadData();
-setInterval(loadData, 5 * 60 * 1000);
+document.addEventListener("DOMContentLoaded", () => {
+  loadData();
+  setInterval(loadData, 5 * 60 * 1000);
+});
 </script>
 </body>
 </html>
