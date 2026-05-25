@@ -4,37 +4,207 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>АЛЬФАПРОМ — Рейтинг менеджеров</title>
+
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
-<style>
-  :root {
-    --orange: #FF6B00;
-    --orange2: #FF9A00;
-    --pale: #FFF8F3;
-    --border: #FFD4B0;
-    --white: #ffffff;
-    --bg: #F5F1ED;
-    --text: #1A1A1A;
-    --muted: #888;
-    --green: #2E7D32;
-    --red: #C62828;
-    --radius: 12px;
-  }
-  * { box-sizing: border-box; margin: 0; padding: 0; }
-  body { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
 
-  /* HEADER */
-  header {
-    background: var(--orange);
-    padding: 0 28px;
-    display: flex; align-items: center; justify-content: space-between;
-    height: 68px; position: sticky; top: 0; z-index: 100;
-    box-shadow: 0 2px 16px rgba(255,107,0,0.35);
+<style>
+/* твой CSS НЕ ТРОГАЮ — оставь как есть */
+</style>
+</head>
+
+<body>
+
+<header>
+  <div class="logo">
+    <div class="logo-mark">АП</div>
+    <div class="logo-text">
+      <h1>АЛЬФАПРОМ</h1>
+      <p>Рейтинг менеджеров</p>
+    </div>
+  </div>
+
+  <div class="header-right">
+    <div class="update-box">
+      <div class="time" id="update-time">—:—</div>
+      <div class="lbl">Обновлено</div>
+    </div>
+
+    <button class="refresh-btn" id="refreshBtn" onclick="loadData()">
+      Обновить
+    </button>
+  </div>
+</header>
+
+<div class="month-bar" id="month-bar"></div>
+
+<main>
+
+<div class="error-bar" id="error-bar" style="display:none;">
+Ошибка загрузки данных
+</div>
+
+<div class="section-label">Показатели отдела</div>
+
+<div class="top-row">
+  <div class="kpi-card"><div class="kpi-label">План</div><div class="kpi-value" id="k-plan">—</div></div>
+  <div class="kpi-card"><div class="kpi-label">Факт</div><div class="kpi-value" id="k-fact">—</div></div>
+  <div class="kpi-card"><div class="kpi-label">Конверсия</div><div class="kpi-value" id="k-conv">—</div></div>
+  <div class="kpi-card"><div class="kpi-label">Продажи</div><div class="kpi-value" id="k-sales">—</div></div>
+
+  <div class="spd-card">
+    <div class="spd-title">% выполнения</div>
+    <canvas id="spd-exec" width="160" height="100"></canvas>
+    <div id="spd-exec-val">—</div>
+  </div>
+
+  <div class="spd-card">
+    <div class="spd-title">RunRate</div>
+    <canvas id="spd-run" width="160" height="100"></canvas>
+    <div id="spd-run-val">—</div>
+  </div>
+</div>
+
+<div class="mgr-table-wrap">
+<table>
+<thead>
+<tr>
+  <th>#</th>
+  <th>Менеджер</th>
+  <th>План</th>
+  <th>Факт</th>
+  <th>%</th>
+  <th>RunRate</th>
+</tr>
+</thead>
+<tbody id="mgr-tbody"></tbody>
+</table>
+</div>
+
+<div class="bottom-row">
+  <div class="chart-card">
+    <canvas id="barChart"></canvas>
+  </div>
+  <div class="chart-card">
+    <canvas id="hbarChart"></canvas>
+  </div>
+</div>
+
+</main>
+
+<script>
+
+const API_URL = "https://script.google.com/macros/s/AKfycbw2yttgN_VAsoSp1EHY0KZfFtO8Q--XROSQCoZihW8kfkwTV8R8kG186sGfpTxGYRmLUw/exec";
+
+let allData = null;
+let currentMonth = null;
+let chartBar = null;
+let chartHbar = null;
+
+function parseNum(v){
+  if(!v) return 0;
+  const n = parseFloat(String(v).replace(',','.'));
+  return isNaN(n) ? 0 : n;
+}
+
+function parseMonth(rows){
+  return rows.map(r => ({
+    name:r[0],
+    plan:parseNum(r[1]),
+    fact:parseNum(r[2]),
+    pct:parseNum(r[3]),
+    run:parseNum(r[4])
+  })).filter(x => x.name);
+}
+
+function render(){
+
+  if(!allData || !currentMonth) return;
+
+  const rows = allData[currentMonth];
+  if(!rows) return;
+
+  const data = parseMonth(rows);
+
+  // TABLE
+  document.getElementById("mgr-tbody").innerHTML =
+    data.map((m,i)=>`
+      <tr>
+        <td>${i+1}</td>
+        <td>${m.name}</td>
+        <td>${m.plan}</td>
+        <td>${m.fact}</td>
+        <td>${Math.round(m.pct*100)}%</td>
+        <td style="color:${m.run*100>=100?'#2E7D32':m.run*100>=60?'#FF6B00':'#C62828'};font-weight:600">
+          ${Math.round(m.run*100)}%
+        </td>
+      </tr>
+    `).join("");
+
+  // PROTECTION
+  const barEl = document.getElementById("barChart");
+  const hbarEl = document.getElementById("hbarChart");
+  if(!barEl || !hbarEl) return;
+
+  const labels = data.map(d=>d.name);
+
+  // BAR
+  if(chartBar) chartBar.destroy();
+  chartBar = new Chart(barEl,{
+    type:"bar",
+    data:{
+      labels,
+      datasets:[
+        {label:"План",data:data.map(d=>d.plan),backgroundColor:"#FFD4B0"},
+        {label:"Факт",data:data.map(d=>d.fact),backgroundColor:"#FF6B00"}
+      ]
+    }
+  });
+
+  // HBAR
+  if(chartHbar) chartHbar.destroy();
+  chartHbar = new Chart(hbarEl,{
+    type:"bar",
+    data:{
+      labels,
+      datasets:[{
+        data:data.map(d=>d.pct*100),
+        backgroundColor:data.map(d=>d.pct*100>=100?'#2E7D32':d.pct*100>=60?'#FF6B00':'#C62828')
+      }]
+    },
+    options:{indexAxis:"y"}
+  });
+}
+
+async function loadData(){
+  try{
+    const resp = await fetch(API_URL,{cache:"no-store"});
+    allData = await resp.json();
+
+    const months = Object.keys(allData);
+    currentMonth = months[0];
+
+    render();
+
+    document.getElementById("update-time").textContent =
+      new Date().toLocaleTimeString();
+
+  }catch(e){
+    console.log(e);
+    document.getElementById("error-bar").style.display="block";
   }
-  .logo { display: flex; align-items: center; gap: 14px; }
-  .logo-mark {
-    width: 42px; height: 42px; background: rgba(255,255,255,0.22);
-    border-radius: 9px; display: flex; align-items: center; justify-content: center;
+}
+
+// FIX: DOM READY
+document.addEventListener("DOMContentLoaded",()=>{
+  loadData();
+  setInterval(loadData,300000);
+});
+
+</script>
+
+</body>
+</html>    border-radius: 9px; display: flex; align-items: center; justify-content: center;
     font-family: 'Bebas Neue', sans-serif; font-size: 20px; color: #fff; letter-spacing: 1px;
   }
   .logo-text h1 { font-family: 'Bebas Neue', sans-serif; font-size: 22px; letter-spacing: 3px; color: #fff; line-height: 1; }
