@@ -398,7 +398,14 @@ function renderMonth() {
           <span class="pb-pct ${cls}">${p}%</span>
         </div>
       </td>
-      <td><span class="${cls==='high'?'':''"style="color:${m.runRate*100>=100?'#2E7D32':m.runRate*100>=60?'#FF6B00':'#C62828'};font-weight:600">${Math.round(m.runRate*100)}%</span></td>
+      <td>
+  <span style="
+    color:${m.runRate * 100 >= 100 ? '#2E7D32' : m.runRate * 100 >= 60 ? '#FF6B00' : '#C62828'};
+    font-weight:600
+  ">
+    ${Math.round(m.runRate * 100)}%
+  </span>
+</td>
       <td>${Math.round(m.zayvok)}</td>
       <td class="money">${perStr}</td>
       <td>${convStr}</td>
